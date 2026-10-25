@@ -21,17 +21,7 @@ LOOKAHEAD_BEATS = 2.0   # turn this many beats before the page ends
 PAGE_BREAKS_AFTER_MEASURE = [4]   # list, so we can extend to multi-page later
 
 
-def build_lookup(score_path):
-    score = converter.parse(str(score_path))
-    measures = list(score.parts[0].getElementsByClass("Measure"))
-    lookup = [
-        (float(m.offset),
-         float(m.offset) + float(m.duration.quarterLength),
-         m.number)
-        for m in measures
-    ]
-    pickup_offset = next(start for start, _, num in lookup if num == 1)
-    return lookup, pickup_offset
+from score_model import build_lookup
 
 
 def page_end_beats(lookup, pickup_offset, breaks_after):

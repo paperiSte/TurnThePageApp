@@ -1,0 +1,46 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{box-sizing:border-box}body{margin:0;font:16px system-ui;color:#24243b;background:#f5f3ee;padding:20px}button{font:inherit;border:1px solid #ccc4de;background:white;color:#30294a;border-radius:8px;padding:10px 16px;cursor:pointer}button:disabled{opacity:.4;cursor:default}button:focus-visible,input:focus-visible{outline:3px solid #7963c5}#play{background:#58428b;color:white}nav{display:flex;flex-wrap:wrap;gap:10px;align-items:center}label{margin-left:8px}#status{min-height:28px;margin:18px 0 8px;color:#514365}#score,#preview{background:white;border-radius:8px;padding:12px;box-shadow:0 3px 20px #24243b10}svg{width:100%;height:auto}g.active,g.active *{fill:#bd3d32!important;stroke:#bd3d32!important}#preview{margin-top:18px;border:2px solid #7963c5}#preview[hidden]{display:none}#page{margin-left:auto}progress{width:100%;accent-color:#7963c5;margin:16px 0}small{color:#666}#error{color:#a22222}
+</style>
+<nav aria-label="Rehearsal controls"><button id="play">Start</button><button id="restart">Restart</button><button id="previous">Previous page</button><button id="next">Next page</button><label><input id="auto" type="checkbox" checked> Auto-turn</label><span id="page"></span></nav>
+<p id="status" role="status" aria-live="polite">Ready · Pickup</p><p id="error" role="alert"></p>
+<progress id="progress" value="0" max="1" aria-label="Playback progress"></progress>
+<div id="score" aria-label="Current score page"></div><section id="preview" hidden><strong>Coming next · current notes remain above</strong><div id="previewScore"></div></section>
+<p><small>Previous/Next switches to manual mode. Enable Auto-turn to rejoin the recording. Restart returns to the pickup. The two-beat cue previews the next page; the main page changes at the boundary.</small></p>
+<audio id="audio" preload="auto"></audio>
+<script type="module">
+import {RehearsalState} from 'data:text/javascript;base64,__STATE_MODULE__';
+const data=__REHEARSAL_DATA__;
+const $=id=>document.getElementById(id), audio=$('audio');
+audio.src='data:audio/wav;base64,'+data.audio;
+const state=new RehearsalState(data.model,data.events);
+let lastPage=-1,lastPreview=-1,activeId=null,lastMeasure=null;
+function paint(){
+ const view=state.at(audio.currentTime);
+ if(view.page!==lastPage){$('score').innerHTML=data.model.pages[view.page];lastPage=view.page;activeId=null;}
+ $('page').textContent=`Page ${view.page+1} of ${data.model.pages.length}`;
+ $('previous').disabled=view.page===0;$('next').disabled=view.page===data.model.pages.length-1;
+ $('preview').hidden=view.preview===null;
+ if(view.preview===null&&lastPreview!==-1){$('previewScore').replaceChildren();lastPreview=-1;}
+ if(view.preview!==null&&view.preview!==lastPreview){$('previewScore').innerHTML=data.model.pages[view.preview];lastPreview=view.preview;}
+ const measure=view.measure;
+ if(measure?.id!==activeId){
+  document.querySelectorAll('g.active').forEach(g=>g.classList.remove('active'));
+  if(measure)document.querySelectorAll(`[id="${measure.id}"]`).forEach(g=>g.classList.add('active'));
+  activeId=measure?.id;
+ }
+ if(measure?.number!==lastMeasure||audio.ended){
+  $('status').textContent=(audio.ended?'Complete · ':audio.paused?'Paused · ':'Playing · ')+(measure?.number===0?'Pickup':`Measure ${measure?.number??'—'}`);
+  lastMeasure=measure?.number;
+ }
+ $('progress').value=audio.duration?audio.currentTime/audio.duration:0;
+ $('play').textContent=audio.paused?'Start / Resume':'Pause';
+}
+$('play').onclick=async()=>{try{if(audio.paused){if(audio.ended){state.reset();$('auto').checked=true;audio.currentTime=0;}await audio.play();}else audio.pause();lastMeasure=null;paint();}catch(e){$('error').textContent='Playback could not start. Try Start again. '+e.message;}};
+$('restart').onclick=()=>{audio.pause();audio.currentTime=0;state.reset();$('auto').checked=true;lastMeasure=null;lastPreview=-1;paint();$('status').textContent='Ready · Pickup';};
+for(const [id,delta]of [['previous',-1],['next',1]])$(id).onclick=()=>{state.manual(delta);$('auto').checked=false;paint();};
+$('auto').onchange=()=>{state.auto=$('auto').checked;paint();};
+audio.addEventListener('error',()=>{$('error').textContent='The bundled recording could not be loaded.';});
+audio.addEventListener('ended',()=>{lastMeasure=null;paint();});
+function tick(){paint();requestAnimationFrame(tick);}tick();
+</script></html>

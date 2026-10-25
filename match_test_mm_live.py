@@ -22,15 +22,7 @@ SCORE_FILE       = SCRIPT_DIR / "idea-n10-gibran-alcocer-8bars.mxl"
 PERFORMANCE_FILE = SCRIPT_DIR / "Idea10.wav"
 
 
-def beat_to_measure(beat, lookup, pickup_offset):
-    """Convert a Matchmaker beat to a measure number."""
-    shifted = beat + pickup_offset
-    for start, end, num in lookup:
-        if start <= shifted < end:
-            return num
-    if shifted >= lookup[-1][1]:
-        return lookup[-1][2]
-    return None
+from score_model import beat_to_measure
 
 
 # --- Setup: parse score, build lookup, configure page turner ---
