@@ -13,45 +13,7 @@ SCRIPT_DIR = Path(__file__).parent
 SCORE_FILE = SCRIPT_DIR / "idea-n10-gibran-alcocer-8bars.mxl"
 
 
-def build_lookup(score_path):
-    """Parse the score and return (lookup_table, pickup_offset)."""
-    score = converter.parse(str(score_path))
-    measures = list(score.parts[0].getElementsByClass("Measure"))
-
-    lookup = []
-    for m in measures:
-        start = float(m.offset)
-        end = start + float(m.duration.quarterLength)
-        lookup.append((start, end, m.number))
-
-    # Pickup length = offset where measure 1 begins
-    # (because music21 puts the pickup at offset 0)
-    pickup_offset = 0.0
-    for start, end, num in lookup:
-        if num == 1:
-            pickup_offset = start
-            break
-
-    return lookup, pickup_offset
-
-
-def beat_to_measure(matchmaker_beat, lookup, pickup_offset):
-    """
-    Convert a Matchmaker beat position to a measure number.
-    Returns None if the beat is before the score starts.
-    """
-    # Shift Matchmaker's convention to music21's convention
-    shifted_beat = matchmaker_beat + pickup_offset
-
-    for start, end, num in lookup:
-        if start <= shifted_beat < end:
-            return num
-
-    # Past the end of the score
-    if shifted_beat >= lookup[-1][1]:
-        return lookup[-1][2]  # clamp to last measure
-
-    return None  # before the score
+from score_model import build_lookup, beat_to_measure
 
 
 # --- Test with the actual beat positions from today's chroma run ---

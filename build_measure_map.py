@@ -9,20 +9,8 @@ from music21 import converter
 SCRIPT_DIR = Path(__file__).parent
 SCORE_FILE = SCRIPT_DIR / "idea-n10-gibran-alcocer-8bars.mxl"
 
-# Load the score
-score = converter.parse(str(SCORE_FILE))
-
-# Grab measures from the top staff (timing is the same across staves
-# in a piano score, so one part is enough)
-measures = list(score.parts[0].getElementsByClass("Measure"))
-
-# Build the lookup table: (start_beat, end_beat, measure_number)
-lookup = []
-for m in measures:
-    start = float(m.offset)
-    length = float(m.duration.quarterLength)
-    end = start + length
-    lookup.append((start, end, m.number))
+from score_model import build_lookup
+lookup, _ = build_lookup(SCORE_FILE)
 
 # Print it so we can eyeball it
 print(f"{'Measure':>8} {'Start beat':>12} {'End beat':>12} {'Length':>8}")
